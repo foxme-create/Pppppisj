@@ -3,6 +3,10 @@
 mode: backtest          # backtest | paper | live
 exchange: binance
 symbol: BTC/USDT
+# For multi-symbol portfolio backtests (run_portfolio.py). Capital is shared
+# and capped at risk.max_positions concurrent positions. Leave empty to use
+# just `symbol` above.
+symbols: []             # e.g. [BTC/USDT, ETH/USDT, SOL/USDT]
 timeframe: 1h
 start_equity: 200       # used for backtest & paper accounting (your real $50-200)
 history_limit: 1500     # candles to pull for backtest

@@ -25,9 +25,14 @@ none of them has an edge. Capital you don't lose is the first profit.
    (`run_select.py`) — this is the "implement the best variant" step.
 3. **Optimize** a strategy's parameters with walk-forward validation
    (`run_optimize.py`).
-4. **Paper-trade** the chosen strategy on an exchange **testnet** (real market
+4. **Portfolio backtest** one strategy across several symbols from a shared
+   cash pool (`run_portfolio.py`).
+5. **Paper-trade** the chosen strategy on an exchange **testnet** (real market
    data, fake money).
-5. **Live-trade** with real funds — only by flipping one flag in the config.
+6. **Live-trade** with real funds — only by flipping one flag in the config.
+
+Backtests and portfolio runs can emit an equity + drawdown **PNG chart** with
+`--plot out.png`.
 
 Every mode runs the *exact same* strategy + risk code, so what you test is
 what you trade.
@@ -118,12 +123,15 @@ bot/
   metrics.py     Sharpe / Sortino / CAGR / profit factor / expectancy
   optimize.py    grid search + walk-forward (out-of-sample) validation
   selector.py    auto-pick the best strategy, OOS-validated
+  portfolio.py   multi-symbol backtest with shared cash + position cap
+  plotting.py    equity + drawdown PNG charts (matplotlib)
   state.py       crash-safe persistence (resume open position on restart)
   notify.py      Telegram alerts (stdlib only; no-op when unconfigured)
   engine.py      live/paper trading loop (persistence + alerts + reconcile)
-run_backtest.py  CLI: backtest one strategy
+run_backtest.py  CLI: backtest one strategy (--plot for a chart)
 run_select.py    CLI: auto-select the best strategy
 run_optimize.py  CLI: optimize params with walk-forward
+run_portfolio.py CLI: multi-symbol portfolio backtest
 run_live.py      CLI: paper/live
-tests/           unit tests
+tests/           unit tests (run in CI on every push)
 ```

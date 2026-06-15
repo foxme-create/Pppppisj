@@ -15,6 +15,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Backtest a trading strategy.")
     parser.add_argument("--config", default="config.yaml", help="path to config YAML")
     parser.add_argument("--save-curve", default="", help="optional CSV path for equity curve")
+    parser.add_argument("--plot", default="", help="optional PNG path for an equity+drawdown chart")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
@@ -37,6 +38,13 @@ def main() -> None:
     if args.save_curve:
         result.equity_curve.to_csv(args.save_curve, header=["equity"])
         print(f"\nEquity curve saved to {args.save_curve}")
+
+    if args.plot:
+        from bot.plotting import plot_equity
+        bench = df.set_index("datetime")["close"].iloc[strategy.min_bars:]
+        plot_equity(result.equity_curve, args.plot, benchmark=bench,
+                    title=f"{cfg.strategy.name} on {cfg.symbol} {cfg.timeframe}")
+        print(f"Chart saved to {args.plot}")
 
 
 if __name__ == "__main__":

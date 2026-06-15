@@ -30,6 +30,7 @@ class Config:
     mode: str = "backtest"            # backtest | paper | live
     exchange: str = "binance"
     symbol: str = "BTC/USDT"
+    symbols: list[str] = field(default_factory=list)  # for portfolio backtests
     timeframe: str = "1h"
     start_equity: float = 200.0       # used for backtest/paper accounting
     history_limit: int = 1500         # candles to pull for backtest
