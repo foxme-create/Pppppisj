@@ -1,0 +1,34 @@
+# Copy to config.yaml and edit. config.yaml is gitignored (never commit keys).
+
+mode: backtest          # backtest | paper | live
+exchange: binance
+symbol: BTC/USDT
+timeframe: 1h
+start_equity: 200       # used for backtest & paper accounting (your real $50-200)
+history_limit: 1500     # candles to pull for backtest
+poll_seconds: 60        # live/paper loop interval
+
+# Testnet keys from https://testnet.binance.vision/ (free, fake money).
+# Required for paper/live modes. Leave empty for backtest.
+testnet: true
+api_key: ""
+api_secret: ""
+
+risk:
+  risk_per_trade: 0.01    # risk 1% of equity per trade
+  stop_atr_mult: 2.0      # stop = 2 * ATR below entry
+  take_profit_rr: 2.0     # take-profit at 2x the stop distance (reward:risk 2:1)
+  max_drawdown: 0.20      # halt everything if equity drops 20% from its peak
+  max_positions: 1
+  fee_rate: 0.001         # 0.1% per side — realistic spot taker fee
+  slippage: 0.0005        # 0.05% assumed slippage per side
+
+strategy:
+  name: ema_rsi           # ema_rsi | mean_reversion
+  params:
+    ema_fast: 20
+    ema_slow: 50
+    rsi_period: 14
+    rsi_max: 70
+    rsi_min: 50
+    atr_period: 14
