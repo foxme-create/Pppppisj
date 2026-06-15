@@ -32,3 +32,10 @@ strategy:
     rsi_max: 70
     rsi_min: 50
     atr_period: 14
+
+# Parameter grid for run_optimize.py. Each listed param is swept over its
+# values; walk-forward then validates the winner out-of-sample.
+optimize:
+  ema_fast: [10, 20, 30]
+  ema_slow: [50, 100, 150]
+  rsi_max: [65, 70, 75]

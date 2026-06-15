@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 
+from . import metrics
 from .broker import PaperBroker
 from .config import Config
 from .risk import RiskManager
@@ -23,6 +24,7 @@ class BacktestResult:
     trades: list[dict]
     start_equity: float
     final_equity: float
+    timeframe: str = "1h"
 
     @property
     def total_return(self) -> float:
@@ -36,25 +38,44 @@ class BacktestResult:
 
     @property
     def win_rate(self) -> float:
-        closed = [t for t in self.trades if t["side"] == "sell"]
-        if not closed:
-            return 0.0
-        wins = sum(1 for t in closed if t.get("pnl", 0) > 0)
-        return wins / len(closed)
+        return metrics.win_rate(self.trades)
 
     @property
     def max_drawdown(self) -> float:
-        eq = self.equity_curve
-        if eq.empty:
-            return 0.0
-        peak = eq.cummax()
-        return float(((peak - eq) / peak).max())
+        return metrics.max_drawdown(self.equity_curve)
+
+    @property
+    def sharpe(self) -> float:
+        return metrics.sharpe(self.equity_curve, self.timeframe)
+
+    @property
+    def sortino(self) -> float:
+        return metrics.sortino(self.equity_curve, self.timeframe)
+
+    @property
+    def cagr(self) -> float:
+        return metrics.cagr(self.equity_curve, self.timeframe)
+
+    @property
+    def profit_factor(self) -> float:
+        return metrics.profit_factor(self.trades)
+
+    @property
+    def expectancy(self) -> float:
+        return metrics.expectancy(self.trades)
 
     def summary(self) -> str:
+        pf = self.profit_factor
+        pf_str = "inf" if pf == float("inf") else f"{pf:.2f}"
         return (
             f"Start equity:   {self.start_equity:.2f}\n"
             f"Final equity:   {self.final_equity:.2f}\n"
             f"Total return:   {self.total_return * 100:.2f}%\n"
+            f"CAGR:           {self.cagr * 100:.2f}%\n"
+            f"Sharpe:         {self.sharpe:.2f}\n"
+            f"Sortino:        {self.sortino:.2f}\n"
+            f"Profit factor:  {pf_str}\n"
+            f"Expectancy:     {self.expectancy:.4f} / trade\n"
             f"Trades:         {self.num_trades}\n"
             f"Win rate:       {self.win_rate * 100:.1f}%\n"
             f"Max drawdown:   {self.max_drawdown * 100:.2f}%\n"
@@ -115,4 +136,5 @@ def run_backtest(df: pd.DataFrame, strategy: Strategy, cfg: Config) -> BacktestR
         trades=broker.trades,
         start_equity=cfg.start_equity,
         final_equity=broker.equity(float(df.iloc[-1]["close"])),
+        timeframe=cfg.timeframe,
     )

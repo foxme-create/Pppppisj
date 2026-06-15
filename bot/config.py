@@ -42,6 +42,10 @@ class Config:
     risk: RiskConfig = field(default_factory=RiskConfig)
     strategy: StrategyConfig = field(default_factory=StrategyConfig)
 
+    # Optional parameter grid for run_optimize.py, e.g.
+    # {"ema_fast": [10, 20], "ema_slow": [50, 100]}
+    optimize: dict[str, list] = field(default_factory=dict)
+
     def validate(self) -> None:
         if self.mode not in {"backtest", "paper", "live"}:
             raise ValueError(f"mode must be backtest|paper|live, got {self.mode!r}")
@@ -68,6 +72,7 @@ def load_config(path: str) -> Config:
         name=strat_raw.get("name", "ema_rsi"),
         params=strat_raw.get("params", {}) or {},
     )
-    cfg = Config(risk=risk, strategy=strategy, **raw)
+    optimize = raw.pop("optimize", {}) or {}
+    cfg = Config(risk=risk, strategy=strategy, optimize=optimize, **raw)
     cfg.validate()
     return cfg
