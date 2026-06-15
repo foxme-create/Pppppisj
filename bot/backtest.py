@@ -89,17 +89,26 @@ def run_backtest(df: pd.DataFrame, strategy: Strategy, cfg: Config) -> BacktestR
 
     n = len(df)
     start = strategy.min_bars
+
+    # Precompute every bar's signal in one vectorized pass. Indicators are
+    # causal, so the signal at bar i is identical to computing on df[:i+1] —
+    # but far faster than recomputing per bar.
+    sig = strategy.signals(df)
+    actions = sig["action"].to_numpy()
+    atrs = sig["atr"].to_numpy()
+    highs = df["high"].to_numpy()
+    lows = df["low"].to_numpy()
+    closes = df["close"].to_numpy()
+
     for i in range(start, n):
-        window = df.iloc[: i + 1]
-        bar = df.iloc[i]
-        price = float(bar["close"])
+        price = float(closes[i])
 
         # 1) Manage an open position: check intrabar stop/take first.
         if broker.position:
             pos = broker.position
-            if bar["low"] <= pos.stop_price:
+            if lows[i] <= pos.stop_price:
                 broker.sell(pos.stop_price)
-            elif bar["high"] >= pos.take_price:
+            elif highs[i] >= pos.take_price:
                 broker.sell(pos.take_price)
 
         # 2) Drawdown kill-switch: if tripped, flatten and stop trading.
@@ -110,12 +119,12 @@ def run_backtest(df: pd.DataFrame, strategy: Strategy, cfg: Config) -> BacktestR
             equity_points.append(broker.equity(price))
             break
 
-        # 3) Strategy signal on closed data only.
-        signal = strategy.compute(window)
-        if signal.action == FLAT and broker.position:
+        # 3) Act on the precomputed signal for this bar.
+        action = int(actions[i])
+        if action == FLAT and broker.position:
             broker.sell(price)
-        elif signal.action == LONG and not broker.position:
-            plan = risk.plan_trade(equity, price, signal.atr)
+        elif action == LONG and not broker.position:
+            plan = risk.plan_trade(equity, price, float(atrs[i]))
             if plan.size > 0:
                 broker.buy(price, plan.size, plan.stop_price, plan.take_price)
 

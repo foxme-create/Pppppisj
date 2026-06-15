@@ -24,7 +24,10 @@ risk:
   slippage: 0.0005        # 0.05% assumed slippage per side
 
 strategy:
-  name: ema_rsi           # ema_rsi | mean_reversion
+  # Available: ema_rsi | mean_reversion | donchian_breakout | supertrend |
+  #            macd_trend | bollinger_reversion
+  # Tip: run `python run_select.py` to let the bot pick the best one for you.
+  name: ema_rsi
   params:
     ema_fast: 20
     ema_slow: 50
