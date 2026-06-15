@@ -14,6 +14,14 @@ testnet: true
 api_key: ""
 api_secret: ""
 
+# Crash-safe state file: a restart resumes the open position + stops from here.
+state_file: state.json
+
+# Optional Telegram alerts on trades / kill-switch / errors. Leave empty to
+# disable. token from @BotFather, chat_id from @userinfobot.
+telegram_token: ""
+telegram_chat_id: ""
+
 risk:
   risk_per_trade: 0.01    # risk 1% of equity per trade
   stop_atr_mult: 2.0      # stop = 2 * ATR below entry
@@ -25,7 +33,8 @@ risk:
 
 strategy:
   # Available: ema_rsi | mean_reversion | donchian_breakout | supertrend |
-  #            macd_trend | bollinger_reversion
+  #            macd_trend | bollinger_reversion | regime_ensemble
+  # regime_ensemble adapts: trend-follows when ADX is high, mean-reverts when low.
   # Tip: run `python run_select.py` to let the bot pick the best one for you.
   name: ema_rsi
   params:

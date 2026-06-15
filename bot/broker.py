@@ -90,6 +90,27 @@ class LiveBroker:
             eq += self.position.size * price
         return eq
 
+    def reconcile(self, price: float) -> None:
+        """Reconcile a restored position against the exchange's real balance.
+
+        The exchange is the source of truth. If we think we hold a position but
+        the base-asset balance is effectively zero (it was sold elsewhere, or
+        the order never filled), drop the stale position. If the held amount is
+        smaller than recorded, shrink the position to match.
+        """
+        if not self.position:
+            return
+        base_ccy = self.symbol.split("/")[0]
+        bal = self.exchange.fetch_balance()
+        held = float(bal.get(base_ccy, {}).get("free", 0.0) or 0.0)
+
+        # Treat dust (worth < 1 unit of quote) as zero.
+        if held * price < 1.0:
+            self.position = None
+            return
+        if held < self.position.size:
+            self.position.size = held
+
     def buy(self, price: float, size: float, stop: float, take: float) -> None:
         if self.position or size <= 0:
             return

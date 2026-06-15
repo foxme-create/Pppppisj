@@ -39,6 +39,14 @@ class Config:
     api_key: str = ""
     api_secret: str = ""
 
+    # Persistence: where to save live/paper state so a restart resumes safely.
+    state_file: str = "state.json"
+
+    # Optional Telegram alerts (trades, kill-switch, errors). Leave empty to
+    # disable. Get a token from @BotFather; chat_id from @userinfobot.
+    telegram_token: str = ""
+    telegram_chat_id: str = ""
+
     risk: RiskConfig = field(default_factory=RiskConfig)
     strategy: StrategyConfig = field(default_factory=StrategyConfig)
 

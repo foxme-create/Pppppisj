@@ -44,6 +44,7 @@ Each is a documented, real-world approach — not a magic indicator:
 | `ema_rsi` | Trend | Fast>slow EMA with an RSI momentum band |
 | `bollinger_reversion` | Mean reversion | Buy below lower band, exit at middle |
 | `mean_reversion` | Mean reversion | Buy oversold RSI dips inside an uptrend |
+| `regime_ensemble` | Adaptive | Trend-follow when ADX is high, mean-revert when low |
 
 ## Finding the best strategy (recommended first step)
 
@@ -82,6 +83,17 @@ python run_live.py --config config.yaml         # mode: paper in config
 Binance Spot Testnet: https://testnet.binance.vision/ — log in with GitHub,
 generate an API key/secret, paste into `config.yaml`. No real money involved.
 
+## Live safety features
+
+- **Crash-safe state** (`state_file`): the open position, its stop/take and the
+  drawdown peak are saved after every action. Restart the bot and it resumes
+  exactly where it was instead of forgetting an open trade.
+- **Exchange reconciliation** (live mode): on startup the saved position is
+  checked against your real exchange balance — the exchange wins. A position
+  sold elsewhere, or an order that never filled, is dropped automatically.
+- **Telegram alerts** (optional): get a message on every entry/exit, on a
+  kill-switch halt, and on loop errors. Set `telegram_token` + `telegram_chat_id`.
+
 ## Going live (real money)
 
 Only after your backtest **and** paper run show a positive, stable result over
@@ -106,7 +118,9 @@ bot/
   metrics.py     Sharpe / Sortino / CAGR / profit factor / expectancy
   optimize.py    grid search + walk-forward (out-of-sample) validation
   selector.py    auto-pick the best strategy, OOS-validated
-  engine.py      live/paper trading loop
+  state.py       crash-safe persistence (resume open position on restart)
+  notify.py      Telegram alerts (stdlib only; no-op when unconfigured)
+  engine.py      live/paper trading loop (persistence + alerts + reconcile)
 run_backtest.py  CLI: backtest one strategy
 run_select.py    CLI: auto-select the best strategy
 run_optimize.py  CLI: optimize params with walk-forward

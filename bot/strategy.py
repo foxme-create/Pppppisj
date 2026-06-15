@@ -168,6 +168,37 @@ class BollingerReversionStrategy(Strategy):
         return self._frame(df.index, action, atr)
 
 
+class RegimeEnsembleStrategy(Strategy):
+    """Switch sub-strategies based on the market regime (ADX).
+
+    Markets alternate between trending and ranging. Trend systems lose money in
+    chop; mean-reversion systems get run over in strong trends. ADX measures
+    trend *strength*: when ADX is high we follow a trend sub-strategy, when it
+    is low we use a mean-reversion sub-strategy. This adapts to the regime
+    instead of betting the market is always one or the other.
+    """
+
+    def __init__(self, adx_period=14, adx_threshold=25.0,
+                 trend="supertrend", range="bollinger_reversion",
+                 trend_params=None, range_params=None):
+        self.adx_period = adx_period
+        self.adx_threshold = adx_threshold
+        self.trend_sub = build_strategy(trend, trend_params or {})
+        self.range_sub = build_strategy(range, range_params or {})
+        self.min_bars = max(self.trend_sub.min_bars, self.range_sub.min_bars, adx_period + 2)
+
+    def signals(self, df: pd.DataFrame) -> pd.DataFrame:
+        adx = ind.adx(df["high"], df["low"], df["close"], self.adx_period)
+        trend_sig = self.trend_sub.signals(df)
+        range_sig = self.range_sub.signals(df)
+        trending = (adx >= self.adx_threshold).to_numpy()
+        action = np.where(trending, trend_sig["action"].to_numpy(),
+                          range_sig["action"].to_numpy())
+        # ATR is regime-independent; both subs compute it the same way.
+        atr = trend_sig["atr"]
+        return self._frame(df.index, action, atr)
+
+
 _REGISTRY = {
     "ema_rsi": EmaRsiStrategy,
     "mean_reversion": MeanReversionStrategy,
@@ -175,6 +206,7 @@ _REGISTRY = {
     "supertrend": SupertrendStrategy,
     "macd_trend": MacdTrendStrategy,
     "bollinger_reversion": BollingerReversionStrategy,
+    "regime_ensemble": RegimeEnsembleStrategy,
 }
 
 # Sensible default parameter grids for optimization / strategy selection.
@@ -185,6 +217,7 @@ _DEFAULT_GRIDS = {
     "supertrend": {"period": [7, 10, 14], "multiplier": [2.0, 3.0, 4.0]},
     "macd_trend": {"fast": [12], "slow": [26], "trend_ema": [100, 200]},
     "bollinger_reversion": {"period": [15, 20, 30], "num_std": [2.0, 2.5, 3.0]},
+    "regime_ensemble": {"adx_threshold": [20.0, 25.0, 30.0]},
 }
 
 
