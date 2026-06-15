@@ -44,7 +44,14 @@ def _restore(cfg: Config, broker, risk: RiskManager, price: float):
         broker.position = saved_pos
         broker.reconcile(price)
     else:
+        # Paper: restore the *full* accounting state. Otherwise a fresh broker
+        # would hold full starting cash AND the restored position, double-
+        # counting equity.
         broker.position = saved_pos
+        if st.cash is not None:
+            broker.cash = st.cash
+        if st.realized_pnl is not None:
+            broker.realized_pnl = st.realized_pnl
 
     if broker.position:
         log.info("Restored open position: size=%.6f entry=%.2f stop=%.2f take=%.2f",
@@ -81,14 +88,20 @@ def run_live(cfg: Config) -> None:
     notifier.send(msg)
 
     def persist():
+        cash = getattr(broker, "cash", None)
+        realized = getattr(broker, "realized_pnl", None)
         save_state(cfg.state_file, mode=cfg.mode, symbol=cfg.symbol,
                    peak_equity=risk.peak_equity, last_bar_ts=last_bar_ts,
-                   position=broker.position)
+                   position=broker.position, cash=cash, realized_pnl=realized)
 
     while True:
         try:
-            df = fetch_ohlcv(exchange, cfg.symbol, cfg.timeframe, limit=strategy.min_bars + 5)
-            bar_ts = int(df["timestamp"].iloc[-1])
+            df = fetch_ohlcv(exchange, cfg.symbol, cfg.timeframe, limit=strategy.min_bars + 6)
+            # The exchange's last candle is the *forming* (incomplete) one. Act
+            # on the last CLOSED candle to avoid signals that repaint before the
+            # bar closes. Use the latest price for execution and stop checks.
+            closed = df.iloc[:-1]
+            bar_ts = int(closed["timestamp"].iloc[-1])
             price = float(df["close"].iloc[-1])
 
             # Manage open position stops/takes every poll (not just on new bars).
@@ -113,7 +126,7 @@ def run_live(cfg: Config) -> None:
 
             if bar_ts != last_bar_ts:
                 last_bar_ts = bar_ts
-                signal = strategy.compute(df)
+                signal = strategy.compute(closed)
                 log.info("Signal=%s price=%.2f equity=%.2f", signal.action, price, equity)
                 if signal.action == FLAT and broker.position:
                     broker.sell(price)

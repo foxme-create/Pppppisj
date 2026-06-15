@@ -20,7 +20,16 @@ def make_exchange(name: str, testnet: bool = False, api_key: str = "", api_secre
             "apiKey": api_key,
             "secret": api_secret,
             "enableRateLimit": True,
-            "options": {"defaultType": "spot"},
+            "options": {
+                "defaultType": "spot",
+                # Allow spot market BUY orders sized in the base asset (we pass
+                # a base-asset amount). Without this, Binance-style exchanges
+                # require a quote amount/price and the order would be rejected.
+                "createMarketBuyOrderRequiresPrice": False,
+                # Avoid "timestamp for this request is outside recvWindow"
+                # errors by syncing to the exchange clock.
+                "adjustForTimeDifference": True,
+            },
         }
     )
     if testnet:

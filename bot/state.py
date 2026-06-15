@@ -29,6 +29,9 @@ class BotState:
     peak_equity: float
     last_bar_ts: int | None = None
     position: dict | None = None   # serialized Position or None
+    # Paper-mode accounting (None for live, where the exchange holds the cash).
+    cash: float | None = None
+    realized_pnl: float | None = None
 
     def to_position(self) -> Position | None:
         if not self.position:
@@ -37,7 +40,8 @@ class BotState:
 
 
 def save_state(path: str, *, mode: str, symbol: str, peak_equity: float,
-               last_bar_ts: int | None, position: Position | None) -> None:
+               last_bar_ts: int | None, position: Position | None,
+               cash: float | None = None, realized_pnl: float | None = None) -> None:
     """Atomically write state to `path` (temp file + rename)."""
     state = BotState(
         mode=mode,
@@ -45,6 +49,8 @@ def save_state(path: str, *, mode: str, symbol: str, peak_equity: float,
         peak_equity=peak_equity,
         last_bar_ts=last_bar_ts,
         position=asdict(position) if position else None,
+        cash=cash,
+        realized_pnl=realized_pnl,
     )
     try:
         d = os.path.dirname(os.path.abspath(path))

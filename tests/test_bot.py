@@ -110,6 +110,19 @@ def test_paper_broker_applies_fees():
     assert abs(b.cash - 899.9) < 1e-6
 
 
+def test_paper_broker_pnl_nets_both_fees():
+    # Recorded per-trade PnL must subtract BOTH the entry and exit fees, or
+    # win-rate / profit-factor / expectancy are optimistic.
+    rc = RiskConfig(fee_rate=0.001, slippage=0.0)
+    b = PaperBroker(1000, rc)
+    b.buy(price=100, size=1, stop=90, take=120)   # entry fee 0.1
+    b.sell(price=110)                              # exit fee 0.11
+    # pnl = (110-100)*1 - 0.11 - 0.1 = 9.79
+    assert abs(b.trades[-1]["pnl"] - 9.79) < 1e-9
+    # realized_pnl must match the cash change minus nothing (round-trip).
+    assert abs(b.realized_pnl - 9.79) < 1e-9
+
+
 # ---- backtest end to end -------------------------------------------------
 
 def test_backtest_runs_and_is_consistent():

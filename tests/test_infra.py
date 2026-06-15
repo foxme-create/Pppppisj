@@ -73,6 +73,45 @@ def test_load_missing_state_returns_none(tmp_path):
     assert load_state(str(tmp_path / "nope.json")) is None
 
 
+def test_state_persists_cash_and_pnl(tmp_path):
+    from bot.broker import PaperBroker
+    path = str(tmp_path / "state.json")
+    rc = RiskConfig(fee_rate=0.0, slippage=0.0)
+    b = PaperBroker(1000, rc)
+    b.buy(price=100, size=5, stop=90, take=120)   # cash -> 500
+    save_state(path, mode="paper", symbol="BTC/USDT", peak_equity=1000.0,
+               last_bar_ts=1, position=b.position, cash=b.cash,
+               realized_pnl=b.realized_pnl)
+    st = load_state(path)
+    assert st.cash == 500.0
+    assert st.realized_pnl == 0.0
+
+
+def test_paper_resume_does_not_double_count_equity(tmp_path):
+    """Regression: a restored paper position must not be added on top of a full
+    fresh cash balance."""
+    from bot.broker import PaperBroker
+    path = str(tmp_path / "state.json")
+    rc = RiskConfig(fee_rate=0.0, slippage=0.0)
+
+    # Session 1: buy, then persist.
+    b1 = PaperBroker(1000, rc)
+    b1.buy(price=100, size=5, stop=90, take=120)   # cash 500, holds 5 @ 100
+    assert abs(b1.equity(100) - 1000) < 1e-9
+    save_state(path, mode="paper", symbol="BTC/USDT", peak_equity=1000.0,
+               last_bar_ts=1, position=b1.position, cash=b1.cash,
+               realized_pnl=b1.realized_pnl)
+
+    # Session 2: fresh broker + restore exactly like engine._restore does.
+    b2 = PaperBroker(1000, rc)
+    st = load_state(path)
+    b2.position = st.to_position()
+    b2.cash = st.cash
+    b2.realized_pnl = st.realized_pnl
+    # Equity must still be 1000 (500 cash + 5*100), NOT 1500.
+    assert abs(b2.equity(100) - 1000) < 1e-9
+
+
 def test_save_state_is_atomic_no_leftover_tmp(tmp_path):
     path = str(tmp_path / "state.json")
     save_state(path, mode="paper", symbol="BTC/USDT", peak_equity=1.0,

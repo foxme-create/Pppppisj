@@ -50,7 +50,8 @@ class PaperBroker:
             if size <= 0:
                 return
         self.cash -= cost + fee
-        self.position = Position(entry_price=fill, size=size, stop_price=stop, take_price=take)
+        self.position = Position(entry_price=fill, size=size, stop_price=stop,
+                                 take_price=take, entry_fee=fee)
         self.trades.append({"side": "buy", "price": fill, "size": size, "fee": fee})
 
     def sell(self, price: float) -> None:
@@ -60,7 +61,9 @@ class PaperBroker:
         proceeds = fill * self.position.size
         fee = proceeds * self.risk.fee_rate
         self.cash += proceeds - fee
-        pnl = (fill - self.position.entry_price) * self.position.size - fee
+        # Round-trip PnL nets BOTH the entry and exit fees.
+        pnl = ((fill - self.position.entry_price) * self.position.size
+               - fee - self.position.entry_fee)
         self.realized_pnl += pnl
         self.trades.append(
             {"side": "sell", "price": fill, "size": self.position.size, "fee": fee, "pnl": pnl}

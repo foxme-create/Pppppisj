@@ -13,6 +13,7 @@ class Position:
     size: float            # base-asset quantity
     stop_price: float
     take_price: float
+    entry_fee: float = 0.0  # fee paid on entry, so round-trip PnL is honest
 
     def unrealized(self, price: float) -> float:
         return (price - self.entry_price) * self.size
